@@ -10,6 +10,7 @@
 //COLORS
 #define COLOR_RED 0xAA3333AA
 #define MAX_JOBS 20
+#define MAX_HOUSES 200
 
 //enums
 enum pInfo {
@@ -27,7 +28,8 @@ enum pInfo {
 	pAdminLevel,
 }
 
-new pizzas[MAX_PLAYERS] = 0, isWorkingPizza[MAX_PLAYERS] = false, pizzaVehicle[MAX_PLAYERS], playername[MAX_PLAYER_NAME];
+new pizzas[MAX_PLAYERS] = 0, isWorkingPizza[MAX_PLAYERS] = false, pizzaVehicle[MAX_PLAYERS], playername[MAX_PLAYER_NAME],
+lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS];
 
 enum jInfo {
 	jId,
@@ -38,6 +40,22 @@ enum jInfo {
 }
 
 new JobInfo[MAX_JOBS][jInfo];
+
+enum hInfo {
+	hId,
+
+	Float:hEntranceX,
+	Float:hEntranceY,
+	Float:hEntranceZ,
+
+	Float:hExitX,
+	Float:hExitY,
+	Float:hExitZ,
+
+	interiorID
+}
+
+new HouseInfo[MAX_HOUSES][hInfo];
 
 enum {
 	//Register
@@ -119,7 +137,8 @@ public OnGameModeInit()
 
 	AddPlayerClass(0, 1958.3783, 1343.1572, 15.3746, 269.1425, 0, 0, 0, 0, 0, 0);
 	//jobs
-	mysql_tquery(SQL, "SELECT * FROM `Jobs`", "loadProperties", "");
+	mysql_tquery(SQL, "SELECT * FROM `jobs`", "loadJobs", "");
+	mysql_tquery(SQL, "SELECT * FROM `houses`", "loadProperties", "");
 	//CreateDynamicPickup(1275, 0, 2096.7034, -1800.0417, 13.3828);
 	//CreateDynamic3DTextLabel("id: 0\nJob: pizza delivery\nUse /getjob to get the job.", -1, 2096.7034, -1800.0417, 13.3828, 15.0);
 
@@ -129,6 +148,27 @@ public OnGameModeInit()
 }
 
 function loadProperties()
+{
+	new houses = cache_num_rows();
+
+	for(new i = 0; i < houses; i++)
+	{
+
+		cache_get_value_name_int(i, "ID", HouseInfo[i][hId]);
+
+		cache_get_value_name_float(i, "EntranceX", HouseInfo[i][hEntranceX]);
+		cache_get_value_name_float(i, "EntranceY", HouseInfo[i][hEntranceY]);
+		cache_get_value_name_float(i, "EntranceZ", HouseInfo[i][hEntranceZ]);
+
+		cache_get_value_name_float(i, "ExitX", HouseInfo[i][hExitX]);
+		cache_get_value_name_float(i, "ExitY", HouseInfo[i][hExitY]);
+		cache_get_value_name_float(i, "ExitZ", HouseInfo[i][hExitZ]);
+	}
+
+	return 1;
+}
+
+function loadJobs()
 {
 	new jobs = cache_num_rows();
 	printf("number of jobs: %d", jobs);
@@ -142,7 +182,7 @@ function loadProperties()
 		cache_get_value_name_float(i, "LocationY", JobInfo[i][jLocationY]);
 		cache_get_value_name_float(i, "LocationZ", JobInfo[i][jLocationZ]);
 
-		new id = CreateDynamicPickup(1275, 0, JobInfo[i][jLocationX], JobInfo[i][jLocationY], JobInfo[i][jLocationZ]);
+		CreateDynamicPickup(1275, 0, JobInfo[i][jLocationX], JobInfo[i][jLocationY], JobInfo[i][jLocationZ]);
 		// printf("pickup id(%d):%d.", i, id);
 		// printf("Location x(%d):%f.", i, JobInfo[i][jLocationX]);
 		// printf("Location y(%d):%f.", i, JobInfo[i][jLocationY]);
@@ -509,6 +549,7 @@ CMD:work(playerid)
 			GetPlayerPos(playerid, x, y,z);
 			pizzaVehicle[playerid] = CreateVehicle(448, x, y, z, ang, -1, -1, -1);
 			PutPlayerInVehicle(playerid, pizzaVehicle[playerid], 0);
+			lastCar[playerid] = pizzaVehicle[playerid];
 		}
 	}
 	
@@ -783,6 +824,49 @@ public OnPlayerExitVehicle(playerid, vehicleid)
 
 public OnPlayerStateChange(playerid, newstate, oldstate)
 {
+	if(isWorkingPizza[playerid])
+	{
+
+		if(oldstate == PLAYER_STATE_DRIVER && newstate == PLAYER_STATE_ONFOOT) 
+		{
+			if(lastCar[playerid] == pizzaVehicle[playerid])
+			{
+				SCM(playerid, COLOR_RED, "you left your pizza vehicle, you have 60 seconds to return.");
+				new funcname[30];
+				
+				format(funcname, sizeof(funcname), "leftPizzaVehicle");
+				timerid[playerid] = SetTimer(funcname, 60000, false);
+				printf("timerid[playerid](off): %d", timerid[playerid]);
+			}
+			// new vehicleid = GetPlayerVehicleID(playerid);
+			// AddVehicleComponent(vehicleid, 1010); // Add NOS to the vehicle
+		}
+
+		if(oldstate == PLAYER_STATE_ONFOOT && newstate == PLAYER_STATE_DRIVER) 
+		{
+			printf("timerid[playerid](on): %d", timerid[playerid]);
+			lastCar[playerid] = GetPlayerVehicleID(playerid);
+			
+			if(timerid[playerid] != 0)
+			{
+				if(GetPlayerVehicleID(playerid) == pizzaVehicle[playerid])
+				{
+					KillTimer(timerid[playerid]);
+					timerid[playerid] = -1;
+					SCM(playerid, -1, "timer killed.");
+				}
+			}
+		}
+	}
+	
+	return 1;
+}
+
+function leftPizzaVehicle(playerid)
+{
+	isWorkingPizza[playerid] = false;
+	DestroyVehicle(pizzaVehicle[playerid]);
+	DisablePlayerCheckpoint(playerid);
 	return 1;
 }
 
@@ -903,4 +987,3 @@ public OnPlayerClickPlayer(playerid, clickedplayerid, source)
 {
 	return 1;
 }
-
