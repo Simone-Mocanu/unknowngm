@@ -29,7 +29,13 @@ enum pInfo {
 }
 
 new pizzas[MAX_PLAYERS] = 0, isWorkingPizza[MAX_PLAYERS] = false, pizzaVehicle[MAX_PLAYERS], playername[MAX_PLAYER_NAME],
-lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS];
+lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS], jobs;
+
+enum pkInfo {
+	pkID,
+	pkType
+}
+new PickupInfo[MAX_PICKUPS][pkInfo];
 
 enum jInfo {
 	jId,
@@ -52,7 +58,8 @@ enum hInfo {
 	Float:hExitY,
 	Float:hExitZ,
 
-	interiorID
+	interiorID,
+	hPickupID
 }
 
 new HouseInfo[MAX_HOUSES][hInfo];
@@ -151,10 +158,10 @@ function loadProperties()
 {
 	new houses = cache_num_rows();
 	printf("number of houses: %d", houses);
+	new housetextlabel[40];
 
 	for(new house = 0; house < houses; house++)
 	{
-
 		cache_get_value_name_int(house, "ID", HouseInfo[house][hId]);
 
 		cache_get_value_name_float(house, "EntranceX", HouseInfo[house][hEntranceX]);
@@ -164,6 +171,10 @@ function loadProperties()
 		cache_get_value_name_float(house, "ExitX", HouseInfo[house][hExitX]);
 		cache_get_value_name_float(house, "ExitY", HouseInfo[house][hExitY]);
 		cache_get_value_name_float(house, "ExitZ", HouseInfo[house][hExitZ]);
+
+		HouseInfo[house][hPickupID] = CreateDynamicPickup(1272, 23, HouseInfo[house][hEntranceX], HouseInfo[house][hEntranceY], HouseInfo[house][hEntranceZ]);
+		format(housetextlabel, sizeof(housetextlabel), "id: %d", HouseInfo[house][hId]);
+		CreateDynamic3DTextLabel(housetextlabel, -1, HouseInfo[house][hEntranceX], HouseInfo[house][hEntranceY], HouseInfo[house][hEntranceZ], 15.0);
 	}
 
 	return 1;
@@ -171,7 +182,7 @@ function loadProperties()
 
 function loadJobs()
 {
-	new jobs = cache_num_rows();
+	jobs = cache_num_rows();
 	printf("number of jobs: %d", jobs);
 
 	new jobtextlabel[100];
@@ -183,7 +194,7 @@ function loadJobs()
 		cache_get_value_name_float(job, "LocationY", JobInfo[job][jLocationY]);
 		cache_get_value_name_float(job, "LocationZ", JobInfo[job][jLocationZ]);
 
-		CreateDynamicPickup(1275, 0, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ]);
+		CreateDynamicPickup(1275, 23, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ]);
 		format(jobtextlabel, sizeof(jobtextlabel), "id: %d\nJob: %s\nUse /getjob to get the job.", JobInfo[job][jId], JobInfo[job][jName]);
 		CreateDynamic3DTextLabel(jobtextlabel, -1, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ], 15.0);
 	}
@@ -191,8 +202,32 @@ function loadJobs()
 
 CMD:addhouse(playerid, params[])
 {
+	new Float:x, Float:y, Float:z, interiorid;
+	if(sscanf(params, "i", interiorid)) return SCM(playerid, -1, "usage: /addhouse <interiorid>");
+	GetPlayerPos(playerid, x, y, z);
+
+	new pickupid = CreateDynamicPickup(1272, 23, x, y, z);
+	new message[128];
+
+	format(message, sizeof(message), "pickupid: %d", pickupid);
+	SCM(playerid, -1, message);
+
+	mysql_format(SQL, gQuery, sizeof(gQuery), "INSERT INTO `houses`(`InteriorID`, `EntranceX`, `EntranceY`, `EntranceZ`) VALUES ('%d','%f','%f', '%f')", interiorid, x, y, z);
+	mysql_tquery(SQL, gQuery, "InsertHouse", "i", playerid);
 
 	return 1;
+}
+
+function InsertHouse(playerid)
+{
+	new houseID = cache_insert_id(), textlabel[40], Float:x, Float:y, Float:z;
+	
+	printf("houseid: %d", houseID);
+
+	GetPlayerPos(playerid, x, y, z);
+
+	format(textlabel, sizeof(textlabel), "id: %d", houseID);
+	CreateDynamic3DTextLabel(textlabel, -1, x, y, z, 15.0);
 }
 
 public OnGameModeExit()
@@ -650,7 +685,7 @@ CMD:spawnveh(playerid, params[])
 
 		//trying to use a value of an element that does not exit
 		//in the vehmodel array doesn't return an error.
-		format(message, sizeof(message), "you created a %s. (id: %d)", vehmodel_names[strval(modelid) - 400], id);
+		format(message, sizeof(message), "%s(id: %d) created.", vehmodel_names[strval(modelid) - 400], id);
 		return SCM(playerid, -1, message);
 	}
 	else
@@ -665,7 +700,7 @@ CMD:spawnveh(playerid, params[])
 				{
 					return SCM(playerid, -1, "invalid model");
 				}
-				format(message, sizeof(message), "%s. (id: %d) created.", vehmodel_names[vehicle], id);
+				format(message, sizeof(message), "%s(id: %d) created.", vehmodel_names[vehicle], id);
 				SCM(playerid, -1, message);
 				PutPlayerInVehicle(playerid, id, 0); 
 
@@ -696,8 +731,8 @@ CMD:destroyveha(playerid, params[])
 		{
 			DestroyVehicle(vehicleid);
 			count += 1;
-			format(message, sizeof(message), "destroyed vehicle. (id: %d)", vehicleid);
-			SCM(playerid, 0xEB4034, message);
+			// format(message, sizeof(message), "destroyed vehicle. (id: %d)", vehicleid);
+			// SCM(playerid, 0xEB4034, message);
 		}
 	}
 
@@ -1061,6 +1096,12 @@ public OnPlayerInteriorChange(playerid, newinteriorid, oldinteriorid)
 
 public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 {
+	new message[128];
+	if(newkeys & KEY_SECONDARY_ATTACK)
+	{
+		format(message, sizeof(message), "pressed: KEY_SECONDARY_ATTACK")
+		SCM(playerid, -1, message);
+	}
 	return 1;
 }
 
@@ -1098,3 +1139,21 @@ public OnPlayerClickPlayer(playerid, clickedplayerid, source)
 {
 	return 1;
 }
+
+public OnPlayerPickUpDynamicPickup(playerid, STREAMER_TAG_PICKUP:pickupid)
+{
+	new messagep[128];
+	format(messagep, sizeof(messagep), "callback pickupid: %d", pickupid);
+	SCM(playerid, -1, messagep);
+	
+	return 1;
+}
+
+// public OnPlayerPickUpDynamicPickup(playerid, STREAMER_TAG_PICKUP pickupid)
+// {
+// 	new messagep[128];
+// 	format(messagep, sizeof(messagep), "pickupid: %d", pickupid);
+// 	SCM(playerid, -1, messagep);
+
+// 	return 1;
+// }
