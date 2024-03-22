@@ -133,6 +133,9 @@ public OnGameModeInit()
 	else{
 	}
 
+	DisableInteriorEnterExits();
+	EnableStuntBonusForAll(false);
+
 	AddPlayerClass(0, 1958.3783, 1343.1572, 15.3746, 269.1425, 0, 0, 0, 0, 0, 0);
 	//jobs
 	mysql_tquery(SQL, "SELECT * FROM `jobs`", "loadJobs", "");
@@ -141,7 +144,6 @@ public OnGameModeInit()
 	//CreateDynamic3DTextLabel("id: 0\nJob: pizza delivery\nUse /getjob to get the job.", -1, 2096.7034, -1800.0417, 13.3828, 15.0);
 
 	// AddPlayerClass(0,2096.7034,-1800.0417,13.3828,90.9737,0,0,0,0,0,0); //
-	
 	return 1;
 }
 
@@ -185,6 +187,12 @@ function loadJobs()
 		format(jobtextlabel, sizeof(jobtextlabel), "id: %d\nJob: %s\nUse /getjob to get the job.", JobInfo[job][jId], JobInfo[job][jName]);
 		CreateDynamic3DTextLabel(jobtextlabel, -1, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ], 15.0);
 	}
+}
+
+CMD:addhouse(playerid, params[])
+{
+
+	return 1;
 }
 
 public OnGameModeExit()
@@ -627,23 +635,44 @@ CMD:vehname(playerid, params[])
 CMD:spawnveh(playerid, params[])
 {
 	new Float:x, Float:y, Float:z;
-	new modelid;
-	new message[40];
+	new modelid[30];
+	new message[128];
 
-	if(sscanf(params, "d", modelid)) return SCM(playerid, 0xEB4034, "usage: /spawnveh <vehicleid>.");
-	format(message, sizeof(message), "modelid: %d", modelid);
-	SCM(playerid, -1, message);
+	if(sscanf(params, "s[30]", modelid)) return SCM(playerid, -1, "usage: /spawnveh <vehicleid>.");
 
 	GetPlayerPos(playerid, x, y, z);
 
-	if(modelid < 400 || modelid > 611) return SCM(playerid, -1, "valid model between 400 and 611");
+	if(IsNumeric(modelid))
+	{
+		if(strval(modelid) < 400 || strval(modelid) > 611) return SCM(playerid, -1, "valid model between 400 and 611");
+		new id = CreateVehicle(strval(modelid), x, y, z, 0, -1, -1, 30);
+		PutPlayerInVehicle(playerid, id, 0); 
 
-	new id = CreateVehicle(modelid, x + 5, y, z, 0, -1, -1, 30);
-	
-	format(message, sizeof(message), "created vehicle. (id: %d)", id);
-	SCM(playerid, 0xEB4034, message);
+		//trying to use a value of an element that does not exit
+		//in the vehmodel array doesn't return an error.
+		format(message, sizeof(message), "you created a %s. (id: %d)", vehmodel_names[strval(modelid) - 400], id);
+		return SCM(playerid, -1, message);
+	}
+	else
+	{
+		for(new vehicle = 0; vehicle < sizeof(vehmodel_names); vehicle++)
+		{
+			if(!strcmp(modelid, vehmodel_names[vehicle], true, strlen(modelid)))
+			{
+				new id = CreateVehicle(vehicle + 400, x, y, z, 0, -1, -1, 30);
 
-	//pveh[playerid]
+				if(id == 65535)
+				{
+					return SCM(playerid, -1, "invalid model");
+				}
+				format(message, sizeof(message), "%s. (id: %d) created.", vehmodel_names[vehicle], id);
+				SCM(playerid, -1, message);
+				PutPlayerInVehicle(playerid, id, 0); 
+
+				break;
+			}
+		}
+	}
 
 	return 1;
 }
@@ -693,9 +722,9 @@ CMD:destroyveh(playerid, params[])
 
 CMD:giveplayer(playerid, params[])
 {
-	new targetid, good[100], amount;
+	new targetid, good[100], Float:amount;
 
-	if(sscanf(params, "is[100]i", targetid, good, amount))
+	if(sscanf(params, "is[100]f", targetid, good, amount))
 	{
 		SCM(playerid, 0xEB4034, "usage: /giveplayer <playerid> <good> <amount>\n");
 		SCM(playerid, 0xEB4034, "goods: money, bankmoney");
@@ -740,7 +769,73 @@ CMD:set(playerid, params[])
 	return 1;
 }
 
-function givegood(playerid, const good[], targetid, amount)
+function IsNumeric(const string[])
+{
+	for(new i = 0; i < strlen(string); i++)
+	{
+		if(string[i] > '9' || string[i] < '0') return 0;
+		return 1;
+	}
+	return 1;
+}
+
+CMD:id(playerid, params[])
+{
+	new player[24];
+	if(sscanf(params, "s[24]", player)) return SCM(playerid, -1, "usage: /id <playerid/playername>.");
+	printf("strval(player): %d", strval(player));
+	// The integer value of the string. '0 if the string is not numeric.
+	if(IsNumeric(player))
+	{
+		new pname[MAX_PLAYER_NAME], message[127];
+		if(!GetPlayerName(strval(player), pname, sizeof(pname)))
+		{
+			return SCM(playerid, COLOR_RED, "player is not connected");
+		}
+		
+		format(message, sizeof(message), "name: %s | level: %d |", pname, PlayerInfo[strval(player)][pLevel]);
+		SCM(playerid, -1, message);
+	}
+	else
+	{
+		new message[126], pname[MAX_PLAYER_NAME], count = 0;
+		for(new pid = 0; pid < MAX_PLAYERS; pid++)
+		{
+			if(!GetPlayerName(pid, pname, sizeof(pname))) continue;
+			if(!strcmp(player, pname, true, strlen(player)))
+			{
+				count++;
+				format(message, sizeof(message), "name: %s | level: %d |", pname, PlayerInfo[strval(player)][pLevel]);
+				SCM(playerid, -1, message);
+			}
+		}
+		if(count == 0)
+		{
+			return SCM(playerid, COLOR_RED, "player is not connected");
+		}
+	}
+ 
+	return 1;
+}
+
+function GetPlayerID(const pname[])
+{
+	for(new player = 0; player < MAX_PLAYERS; player++)
+	{
+		new name[MAX_PLAYER_NAME];
+		GetPlayerName(player, name, sizeof(name));
+
+		if(!strcmp(name, pname, true, strlen(pname)))
+		{
+			return player;
+		}
+		return -1;
+	}
+
+	return 1;
+}
+
+function givegood(playerid, const good[], targetid, Float:amount)
 {
 	//is player admin blah blah
 	if(!strcmp(good, "money"))
@@ -750,8 +845,8 @@ function givegood(playerid, const good[], targetid, amount)
 
 		GetPlayerName(targetid, tname, sizeof(tname));
 		GetPlayerName(playerid, pname, sizeof(pname));
-
-		GivePlayerMoney(targetid, amount);
+		
+		GivePlayerMoney(targetid, floatround(amount));
 		PlayerInfo[targetid][pMoney] += amount;
 		format(message, sizeof(message), "you gave %s: %d$.", tname, amount);
 		SCM(playerid, -1, message);
@@ -852,7 +947,7 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
 				
 				format(funcname, sizeof(funcname), "leftPizzaVehicle");
 				timerid[playerid] = SetTimer(funcname, 60000, false);
-				printf("timerid[playerid](off): %d", timerid[playerid]);
+				// printf("timerid[playerid](off): %d", timerid[playerid]);
 			}
 			// new vehicleid = GetPlayerVehicleID(playerid);
 			// AddVehicleComponent(vehicleid, 1010); // Add NOS to the vehicle
@@ -860,7 +955,7 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
 
 		if(oldstate == PLAYER_STATE_ONFOOT && newstate == PLAYER_STATE_DRIVER) 
 		{
-			printf("timerid[playerid](on): %d", timerid[playerid]);
+			// printf("timerid[playerid](on): %d", timerid[playerid]);
 			lastCar[playerid] = GetPlayerVehicleID(playerid);
 			
 			if(timerid[playerid] != 0)
@@ -869,7 +964,7 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
 				{
 					KillTimer(timerid[playerid]);
 					timerid[playerid] = -1;
-					SCM(playerid, -1, "timer killed.");
+					// SCM(playerid, -1, "timer killed.");
 				}
 			}
 		}
@@ -888,10 +983,7 @@ function leftPizzaVehicle(playerid)
 
 public OnPlayerEnterCheckpoint(playerid)
 {
-	if(isWorkingPizza[playerid])
-	{
-		DisablePlayerCheckpoint(playerid);
-	}
+	DisablePlayerCheckpoint(playerid);
 	// SCM(playerid, COLOR_RED, "checkpoint entered");
 
 	return 1;
