@@ -8574,3 +8574,329 @@ v0.3.7-R2, (C)2005-2015 SA-MP Team
 [16:44:07] timerid[playerid](on): 92
 [16:47:38] timerid[playerid](off): 93
 [20:24:01] [part] salsda has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.7-R2, (C)2005-2015 SA-MP Team
+
+[09:23:17] filterscripts = ""  (string)
+[09:23:17] 
+[09:23:17] Server Plugins
+[09:23:17] --------------
+[09:23:17]  Loading plugin: mysql
+[09:23:17]  >> plugin.mysql: R41-4 successfully loaded.
+[09:23:17]   Loaded.
+[09:23:17]  Loading plugin: sscanf
+[09:23:17] 
+[09:23:17]  ===============================
+[09:23:17] 
+[09:23:17]       sscanf plugin loaded.     
+[09:23:17] 
+[09:23:17]          Version: 2.13.8
+[09:23:17] 
+[09:23:17]    (c) 2022 Alex "Y_Less" Cole  
+[09:23:17] 
+[09:23:17]  ===============================
+[09:23:17] 
+[09:23:17]   Loaded.
+[09:23:17]  Loading plugin: streamer
+[09:23:17] 
+
+*** Streamer Plugin v2.9.6 by Incognito loaded ***
+
+[09:23:17]   Loaded.
+[09:23:17]  Loaded 3 plugins.
+
+[09:23:17] 
+[09:23:17] Filterscripts
+[09:23:17] ---------------
+[09:23:17]   Loaded 0 filterscripts.
+
+[09:23:17] Number of vehicle models: 0
+[09:23:17] number of jobs: 1
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.7-R2, (C)2005-2015 SA-MP Team
+
+[09:27:24] filterscripts = ""  (string)
+[09:27:24] 
+[09:27:24] Server Plugins
+[09:27:24] --------------
+[09:27:24]  Loading plugin: mysql
+[09:27:24]  >> plugin.mysql: R41-4 successfully loaded.
+[09:27:24]   Loaded.
+[09:27:24]  Loading plugin: sscanf
+[09:27:24] 
+[09:27:24]  ===============================
+[09:27:24] 
+[09:27:24]       sscanf plugin loaded.     
+[09:27:24] 
+[09:27:24]          Version: 2.13.8
+[09:27:24] 
+[09:27:24]    (c) 2022 Alex "Y_Less" Cole  
+[09:27:24] 
+[09:27:24]  ===============================
+[09:27:24] 
+[09:27:24]   Loaded.
+[09:27:24]  Loading plugin: streamer
+[09:27:24] 
+
+*** Streamer Plugin v2.9.6 by Incognito loaded ***
+
+[09:27:24]   Loaded.
+[09:27:24]  Loaded 3 plugins.
+
+[09:27:24] 
+[09:27:24] Filterscripts
+[09:27:24] ---------------
+[09:27:24]   Loaded 0 filterscripts.
+
+[09:27:24] Number of vehicle models: 0
+[09:27:24] number of jobs: 1
+[09:27:24] number of houses: 0
+[09:27:49] [connection] incoming connection: 127.0.0.1:61485 id: 0
+[09:27:49] [join] unknown has joined the server (0:127.0.0.1)
+[09:27:49] cache_num_rows(): 1
+[09:27:51] The value in the column 'Name' is 'unknown'.
+[09:27:51] The value in the column 'Password' is '123456'.
+[09:27:51] The value in the column 'Email' is 'simone0443@gmail.com'.
+[09:27:51] The value in the column 'Gender' is '1'.
+[09:27:51] The value in the column 'Job' is '-1'.
+[09:27:51] The value in the column 'Money' is '900'.
+[09:27:51] The value in the column 'BankMoney' is '30234'.
+[09:27:51] The value in the column 'Level' is '0'.
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.7-R2, (C)2005-2015 SA-MP Team
+
+[09:44:44] filterscripts = ""  (string)
+[09:44:44] 
+[09:44:44] Server Plugins
+[09:44:44] --------------
+[09:44:44]  Loading plugin: mysql
+[09:44:44]  >> plugin.mysql: R41-4 successfully loaded.
+[09:44:44]   Loaded.
+[09:44:44]  Loading plugin: sscanf
+[09:44:44] 
+[09:44:44]  ===============================
+[09:44:44] 
+[09:44:44]       sscanf plugin loaded.     
+[09:44:44] 
+[09:44:44]          Version: 2.13.8
+[09:44:44] 
+[09:44:44]    (c) 2022 Alex "Y_Less" Cole  
+[09:44:44] 
+[09:44:44]  ===============================
+[09:44:44] 
+[09:44:44]   Loaded.
+[09:44:44]  Loading plugin: streamer
+[09:44:44] 
+
+*** Streamer Plugin v2.9.6 by Incognito loaded ***
+
+[09:44:44]   Loaded.
+[09:44:44]  Loaded 3 plugins.
+
+[09:44:44] 
+[09:44:44] Filterscripts
+[09:44:44] ---------------
+[09:44:44]   Loaded 0 filterscripts.
+
+[09:44:44] Number of vehicle models: 0
+[09:44:44] number of jobs: 1
+[09:44:44] number of houses: 0
+[09:45:05] [connection] incoming connection: 127.0.0.1:56430 id: 0
+[09:45:06] [join] unknown has joined the server (0:127.0.0.1)
+[09:45:06] cache_num_rows(): 1
+[09:45:09] The value in the column 'Name' is 'unknown'.
+[09:45:09] The value in the column 'Password' is '123456'.
+[09:45:09] The value in the column 'Email' is 'simone0443@gmail.com'.
+[09:45:09] The value in the column 'Gender' is '1'.
+[09:45:09] The value in the column 'Job' is '-1'.
+[09:45:09] The value in the column 'Money' is '900'.
+[09:45:09] The value in the column 'BankMoney' is '30234'.
+[09:45:09] The value in the column 'Level' is '0'.
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.7-R2, (C)2005-2015 SA-MP Team
+
+[09:51:27] filterscripts = ""  (string)
+[09:51:27] 
+[09:51:27] Server Plugins
+[09:51:27] --------------
+[09:51:27]  Loading plugin: mysql
+[09:51:27]  >> plugin.mysql: R41-4 successfully loaded.
+[09:51:27]   Loaded.
+[09:51:27]  Loading plugin: sscanf
+[09:51:27] 
+[09:51:27]  ===============================
+[09:51:27] 
+[09:51:27]       sscanf plugin loaded.     
+[09:51:27] 
+[09:51:27]          Version: 2.13.8
+[09:51:27] 
+[09:51:27]    (c) 2022 Alex "Y_Less" Cole  
+[09:51:27] 
+[09:51:27]  ===============================
+[09:51:27] 
+[09:51:27]   Loaded.
+[09:51:27]  Loading plugin: streamer
+[09:51:27] 
+
+*** Streamer Plugin v2.9.6 by Incognito loaded ***
+
+[09:51:27]   Loaded.
+[09:51:27]  Loaded 3 plugins.
+
+[09:51:27] 
+[09:51:27] Filterscripts
+[09:51:27] ---------------
+[09:51:27]   Loaded 0 filterscripts.
+
+[09:51:27] Number of vehicle models: 0
+[09:51:27] number of jobs: 1
+[09:51:27] number of houses: 0
+[09:51:50] [connection] incoming connection: 127.0.0.1:59728 id: 0
+[09:51:50] [join] unknown has joined the server (0:127.0.0.1)
+[09:51:50] cache_num_rows(): 1
+[09:51:53] The value in the column 'Name' is 'unknown'.
+[09:51:53] The value in the column 'Password' is '123456'.
+[09:51:53] The value in the column 'Email' is 'simone0443@gmail.com'.
+[09:51:53] The value in the column 'Gender' is '1'.
+[09:51:53] The value in the column 'Job' is '-1'.
+[09:51:53] The value in the column 'Money' is '900'.
+[09:51:53] The value in the column 'BankMoney' is '30234'.
+[09:51:53] The value in the column 'Level' is '0'.
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.7-R2, (C)2005-2015 SA-MP Team
+
+[09:55:14] filterscripts = ""  (string)
+[09:55:14] 
+[09:55:14] Server Plugins
+[09:55:14] --------------
+[09:55:14]  Loading plugin: mysql
+[09:55:14]  >> plugin.mysql: R41-4 successfully loaded.
+[09:55:14]   Loaded.
+[09:55:14]  Loading plugin: sscanf
+[09:55:14] 
+[09:55:14]  ===============================
+[09:55:14] 
+[09:55:14]       sscanf plugin loaded.     
+[09:55:14] 
+[09:55:14]          Version: 2.13.8
+[09:55:14] 
+[09:55:14]    (c) 2022 Alex "Y_Less" Cole  
+[09:55:14] 
+[09:55:14]  ===============================
+[09:55:14] 
+[09:55:14]   Loaded.
+[09:55:14]  Loading plugin: streamer
+[09:55:14] 
+
+*** Streamer Plugin v2.9.6 by Incognito loaded ***
+
+[09:55:14]   Loaded.
+[09:55:14]  Loaded 3 plugins.
+
+[09:55:14] 
+[09:55:14] Filterscripts
+[09:55:14] ---------------
+[09:55:14]   Loaded 0 filterscripts.
+
+[09:55:14] Number of vehicle models: 0
+[09:55:14] number of jobs: 1
+[09:55:14] number of houses: 0
+[09:55:33] [connection] incoming connection: 127.0.0.1:61027 id: 0
+[09:55:33] [join] unknown has joined the server (0:127.0.0.1)
+[09:55:33] cache_num_rows(): 1
+[09:55:36] The value in the column 'Name' is 'unknown'.
+[09:55:36] The value in the column 'Password' is '123456'.
+[09:55:36] The value in the column 'Email' is 'simone0443@gmail.com'.
+[09:55:36] The value in the column 'Gender' is '1'.
+[09:55:36] The value in the column 'Job' is '-1'.
+[09:55:36] The value in the column 'Money' is '60900'.
+[09:55:36] The value in the column 'BankMoney' is '30234'.
+[09:55:36] The value in the column 'Level' is '0'.
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.7-R2, (C)2005-2015 SA-MP Team
+
+[09:56:55] filterscripts = ""  (string)
+[09:56:55] 
+[09:56:55] Server Plugins
+[09:56:55] --------------
+[09:56:55]  Loading plugin: mysql
+[09:56:55]  >> plugin.mysql: R41-4 successfully loaded.
+[09:56:55]   Loaded.
+[09:56:55]  Loading plugin: sscanf
+[09:56:55] 
+[09:56:55]  ===============================
+[09:56:55] 
+[09:56:55]       sscanf plugin loaded.     
+[09:56:55] 
+[09:56:55]          Version: 2.13.8
+[09:56:55] 
+[09:56:55]    (c) 2022 Alex "Y_Less" Cole  
+[09:56:55] 
+[09:56:55]  ===============================
+[09:56:55] 
+[09:56:55]   Loaded.
+[09:56:55]  Loading plugin: streamer
+[09:56:55] 
+
+*** Streamer Plugin v2.9.6 by Incognito loaded ***
+
+[09:56:55]   Loaded.
+[09:56:55]  Loaded 3 plugins.
+
+[09:56:55] 
+[09:56:55] Filterscripts
+[09:56:55] ---------------
+[09:56:55]   Loaded 0 filterscripts.
+
+[09:56:55] Number of vehicle models: 0
+[09:56:55] number of jobs: 1
+[09:56:55] number of houses: 0
+[09:57:07] [connection] incoming connection: 127.0.0.1:54230 id: 0
+[09:57:07] [join] unknown has joined the server (0:127.0.0.1)
+[09:57:07] cache_num_rows(): 1
+[09:57:12] The value in the column 'Name' is 'unknown'.
+[09:57:12] The value in the column 'Password' is '123456'.
+[09:57:12] The value in the column 'Email' is 'simone0443@gmail.com'.
+[09:57:12] The value in the column 'Gender' is '1'.
+[09:57:12] The value in the column 'Job' is '-1'.
+[09:57:12] The value in the column 'Money' is '60900'.
+[09:57:12] The value in the column 'BankMoney' is '30234'.
+[09:57:12] The value in the column 'Level' is '0'.
+[10:00:35] timerid[playerid](on): 0
+[10:00:48] timerid[playerid](off): 2

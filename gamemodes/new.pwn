@@ -120,9 +120,7 @@ IsVehicleInRangeOfPlayer(vehicleid, playerid, Float:range, bool:ignoreVW = false
 {
 	new Float:x1, Float:y1, Float:z1, Float:x2, Float:y2, Float:z2;
 
-	return GetVehiclePos(vehicleid, x1, y1, z1)
-		&& GetPlayerPos(playerid, x2, y2, z2)
-		&& VectorSize(x1 - x2, y1 - y2, z1 - z2) <= range
+	return GetVehiclePos(vehicleid, x1, y1, z1) && GetPlayerPos(playerid, x2, y2, z2) && VectorSize(x1 - x2, y1 - y2, z1 - z2) <= range
 		&& (ignoreVW || GetVehicleVirtualWorld(vehicleid) == GetPlayerVirtualWorld(playerid));
 }
 
@@ -150,19 +148,20 @@ public OnGameModeInit()
 function loadProperties()
 {
 	new houses = cache_num_rows();
+	printf("number of houses: %d", houses);
 
-	for(new i = 0; i < houses; i++)
+	for(new house = 0; house < houses; house++)
 	{
 
-		cache_get_value_name_int(i, "ID", HouseInfo[i][hId]);
+		cache_get_value_name_int(house, "ID", HouseInfo[house][hId]);
 
-		cache_get_value_name_float(i, "EntranceX", HouseInfo[i][hEntranceX]);
-		cache_get_value_name_float(i, "EntranceY", HouseInfo[i][hEntranceY]);
-		cache_get_value_name_float(i, "EntranceZ", HouseInfo[i][hEntranceZ]);
+		cache_get_value_name_float(house, "EntranceX", HouseInfo[house][hEntranceX]);
+		cache_get_value_name_float(house, "EntranceY", HouseInfo[house][hEntranceY]);
+		cache_get_value_name_float(house, "EntranceZ", HouseInfo[house][hEntranceZ]);
 
-		cache_get_value_name_float(i, "ExitX", HouseInfo[i][hExitX]);
-		cache_get_value_name_float(i, "ExitY", HouseInfo[i][hExitY]);
-		cache_get_value_name_float(i, "ExitZ", HouseInfo[i][hExitZ]);
+		cache_get_value_name_float(house, "ExitX", HouseInfo[house][hExitX]);
+		cache_get_value_name_float(house, "ExitY", HouseInfo[house][hExitY]);
+		cache_get_value_name_float(house, "ExitZ", HouseInfo[house][hExitZ]);
 	}
 
 	return 1;
@@ -174,22 +173,17 @@ function loadJobs()
 	printf("number of jobs: %d", jobs);
 
 	new jobtextlabel[100];
-	for(new i = 0; i < jobs; i++)
+	for(new job = 0; job < jobs; job++)
 	{
-		cache_get_value_name_int(i, "ID", JobInfo[i][jId]);
-		cache_get_value_name(i, "Name", JobInfo[i][jName]);
-		cache_get_value_name_float(i, "LocationX", JobInfo[i][jLocationX]);
-		cache_get_value_name_float(i, "LocationY", JobInfo[i][jLocationY]);
-		cache_get_value_name_float(i, "LocationZ", JobInfo[i][jLocationZ]);
+		cache_get_value_name_int(job, "ID", JobInfo[job][jId]);
+		cache_get_value_name(job, "Name", JobInfo[job][jName]);
+		cache_get_value_name_float(job, "LocationX", JobInfo[job][jLocationX]);
+		cache_get_value_name_float(job, "LocationY", JobInfo[job][jLocationY]);
+		cache_get_value_name_float(job, "LocationZ", JobInfo[job][jLocationZ]);
 
-		CreateDynamicPickup(1275, 0, JobInfo[i][jLocationX], JobInfo[i][jLocationY], JobInfo[i][jLocationZ]);
-		// printf("pickup id(%d):%d.", i, id);
-		// printf("Location x(%d):%f.", i, JobInfo[i][jLocationX]);
-		// printf("Location y(%d):%f.", i, JobInfo[i][jLocationY]);
-		// printf("Location z(%d):%f.", i, JobInfo[i][jLocationZ]);
-
-		format(jobtextlabel, sizeof(jobtextlabel), "id: %d\nJob: %s\nUse /getjob to get the job.", JobInfo[i][jId], JobInfo[i][jName]);
-		CreateDynamic3DTextLabel(jobtextlabel, -1, JobInfo[i][jLocationX], JobInfo[i][jLocationY], JobInfo[i][jLocationZ], 15.0);
+		CreateDynamicPickup(1275, 0, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ]);
+		format(jobtextlabel, sizeof(jobtextlabel), "id: %d\nJob: %s\nUse /getjob to get the job.", JobInfo[job][jId], JobInfo[job][jName]);
+		CreateDynamic3DTextLabel(jobtextlabel, -1, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ], 15.0);
 	}
 }
 
@@ -608,6 +602,28 @@ CMD:fixveh(playerid, params[])
 	return 1;
 }
 
+CMD:vehname(playerid, params[])
+{
+	new vehname[40], message[128];
+	if(sscanf(params, "s[40]", vehname)) return SCM(playerid, 0xEB4034, "usage: /vehname <vehname>.");
+
+	for(new vehicle = 0; vehicle < sizeof(vehmodel_names); vehicle++)
+	{
+		// format(message, sizeof(message), "sizeof(vehmodel_names): %d", sizeof(vehmodel_names));
+		// SCM(playerid, -1, message);
+		if(!strcmp(vehmodel_names[vehicle], vehname, true, strlen(vehname)))
+		{
+			format(message, sizeof(message), "vehicle name: %s - ID: %d", vehmodel_names[vehicle], vehicle + 400);
+			SCM(playerid, -1, message);
+		}
+
+	}
+
+	// format(message, sizeof(message), "vehname: %s", vehname);
+	// SCM(playerid, -1, message);
+	return 1;
+}
+
 CMD:spawnveh(playerid, params[])
 {
 	new Float:x, Float:y, Float:z;
@@ -872,8 +888,11 @@ function leftPizzaVehicle(playerid)
 
 public OnPlayerEnterCheckpoint(playerid)
 {
-	DisablePlayerCheckpoint(playerid);
-	SCM(playerid, COLOR_RED, "checkpoint entered");
+	if(isWorkingPizza[playerid])
+	{
+		DisablePlayerCheckpoint(playerid);
+	}
+	// SCM(playerid, COLOR_RED, "checkpoint entered");
 
 	return 1;
 }
