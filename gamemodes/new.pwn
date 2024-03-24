@@ -29,7 +29,7 @@ enum pInfo {
 }
 
 new pizzas[MAX_PLAYERS] = 0, isWorkingPizza[MAX_PLAYERS] = false, pizzaVehicle[MAX_PLAYERS], playername[MAX_PLAYER_NAME],
-lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS], jobs;
+lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS], jobs, houses, PlayerPickup[MAX_PLAYERS], lastHousePizza[MAX_PLAYERS];
 
 enum pkInfo {
 	pkID,
@@ -43,6 +43,8 @@ enum jInfo {
 	Float:jLocationX,
 	Float:jLocationY,
 	Float:jLocationZ,
+
+	jPickupID
 }
 
 new JobInfo[MAX_JOBS][jInfo];
@@ -58,7 +60,7 @@ enum hInfo {
 	Float:hExitY,
 	Float:hExitZ,
 
-	interiorID,
+	hInteriorID,
 	hPickupID
 }
 
@@ -82,8 +84,7 @@ new loginAttempts[MAX_PLAYERS] = 0;
 
 main() 
 {
-	// write code here and run "sampctl package build" to compile
-	// then run "sampctl package run" to run it
+	
 }
 
 
@@ -145,8 +146,8 @@ public OnGameModeInit()
 
 	AddPlayerClass(0, 1958.3783, 1343.1572, 15.3746, 269.1425, 0, 0, 0, 0, 0, 0);
 	//jobs
-	mysql_tquery(SQL, "SELECT * FROM `jobs`", "loadJobs", "");
 	mysql_tquery(SQL, "SELECT * FROM `houses`", "loadProperties", "");
+	mysql_tquery(SQL, "SELECT * FROM `jobs`", "loadJobs", "");
 	//CreateDynamicPickup(1275, 0, 2096.7034, -1800.0417, 13.3828);
 	//CreateDynamic3DTextLabel("id: 0\nJob: pizza delivery\nUse /getjob to get the job.", -1, 2096.7034, -1800.0417, 13.3828, 15.0);
 
@@ -156,14 +157,13 @@ public OnGameModeInit()
 
 function loadProperties()
 {
-	new houses = cache_num_rows();
+	houses = cache_num_rows();
 	printf("number of houses: %d", houses);
 	new housetextlabel[40];
 
 	for(new house = 0; house < houses; house++)
 	{
 		cache_get_value_name_int(house, "ID", HouseInfo[house][hId]);
-
 		cache_get_value_name_float(house, "EntranceX", HouseInfo[house][hEntranceX]);
 		cache_get_value_name_float(house, "EntranceY", HouseInfo[house][hEntranceY]);
 		cache_get_value_name_float(house, "EntranceZ", HouseInfo[house][hEntranceZ]);
@@ -172,7 +172,13 @@ function loadProperties()
 		cache_get_value_name_float(house, "ExitY", HouseInfo[house][hExitY]);
 		cache_get_value_name_float(house, "ExitZ", HouseInfo[house][hExitZ]);
 
+		cache_get_value_name_int(house, "InteriorID", HouseInfo[house][hInteriorID]);
 		HouseInfo[house][hPickupID] = CreateDynamicPickup(1272, 23, HouseInfo[house][hEntranceX], HouseInfo[house][hEntranceY], HouseInfo[house][hEntranceZ]);
+
+		PickupInfo[HouseInfo[house][hPickupID]][pkID] = house;
+		//pickup type 1 = house
+		PickupInfo[HouseInfo[house][hPickupID]][pkType] = 1;
+
 		format(housetextlabel, sizeof(housetextlabel), "id: %d", HouseInfo[house][hId]);
 		CreateDynamic3DTextLabel(housetextlabel, -1, HouseInfo[house][hEntranceX], HouseInfo[house][hEntranceY], HouseInfo[house][hEntranceZ], 15.0);
 	}
@@ -194,7 +200,12 @@ function loadJobs()
 		cache_get_value_name_float(job, "LocationY", JobInfo[job][jLocationY]);
 		cache_get_value_name_float(job, "LocationZ", JobInfo[job][jLocationZ]);
 
-		CreateDynamicPickup(1275, 23, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ]);
+		JobInfo[job][jPickupID] = CreateDynamicPickup(1275, 23, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ]);
+
+		PickupInfo[JobInfo[job][jPickupID]][pkID] = job;
+		//pickup type 2 = job
+		PickupInfo[JobInfo[job][jPickupID]][pkType] = 2;
+
 		format(jobtextlabel, sizeof(jobtextlabel), "id: %d\nJob: %s\nUse /getjob to get the job.", JobInfo[job][jId], JobInfo[job][jName]);
 		CreateDynamic3DTextLabel(jobtextlabel, -1, JobInfo[job][jLocationX], JobInfo[job][jLocationY], JobInfo[job][jLocationZ], 15.0);
 	}
@@ -203,16 +214,27 @@ function loadJobs()
 CMD:addhouse(playerid, params[])
 {
 	new Float:x, Float:y, Float:z, interiorid;
+	// message[128];
 	if(sscanf(params, "i", interiorid)) return SCM(playerid, -1, "usage: /addhouse <interiorid>");
 	GetPlayerPos(playerid, x, y, z);
 
-	new pickupid = CreateDynamicPickup(1272, 23, x, y, z);
-	new message[128];
+	HouseInfo[houses][hPickupID] = CreateDynamicPickup(1272, 23, x, y, z);
+	HouseInfo[houses][hId] = houses;
 
-	format(message, sizeof(message), "pickupid: %d", pickupid);
-	SCM(playerid, -1, message);
+	HouseInfo[houses][hEntranceX] = x;
+	HouseInfo[houses][hEntranceY] = y;
+	HouseInfo[houses][hEntranceZ] = z;
+	HouseInfo[houses][hInteriorID] = interiorid;
 
-	mysql_format(SQL, gQuery, sizeof(gQuery), "INSERT INTO `houses`(`InteriorID`, `EntranceX`, `EntranceY`, `EntranceZ`) VALUES ('%d','%f','%f', '%f')", interiorid, x, y, z);
+	PickupInfo[HouseInfo[houses][hPickupID]][pkID] = houses;
+
+	//pickup type 1 = house
+	PickupInfo[HouseInfo[houses][hPickupID]][pkType] = 1;
+	
+	// format(message, sizeof(message), "HouseInfo[%d][hPickupID]: %d, PickupInfo pkID: %d", houses + 1, HouseInfo[houses][hPickupID], PickupInfo[HouseInfo[houses][hPickupID]][pkID]);
+	// SCM(playerid, -1, message);
+
+	mysql_format(SQL, gQuery, sizeof(gQuery), "INSERT INTO `houses`(`ID`, `InteriorID`, `EntranceX`, `EntranceY`, `EntranceZ`) VALUES ('%d', '%d','%f','%f', '%f')", houses, interiorid, x, y, z);
 	mysql_tquery(SQL, gQuery, "InsertHouse", "i", playerid);
 
 	return 1;
@@ -220,14 +242,15 @@ CMD:addhouse(playerid, params[])
 
 function InsertHouse(playerid)
 {
-	new houseID = cache_insert_id(), textlabel[40], Float:x, Float:y, Float:z;
-	
+	//For labeling the pickups
+	new houseID = houses, textlabel[40], Float:x, Float:y, Float:z;
 	printf("houseid: %d", houseID);
 
 	GetPlayerPos(playerid, x, y, z);
 
 	format(textlabel, sizeof(textlabel), "id: %d", houseID);
 	CreateDynamic3DTextLabel(textlabel, -1, x, y, z, 15.0);
+	houses++;
 }
 
 public OnGameModeExit()
@@ -576,6 +599,11 @@ CMD:work(playerid)
 		}
 		else
 		{
+			if(houses == 0)
+			{
+				return SCM(playerid, COLOR_RED, "there are no houses to deliver pizza to.");
+			}
+
 			SCM(playerid, -1, "start work");
 			isWorkingPizza[playerid] = true;
 			pizzas[playerid] = 7;
@@ -587,6 +615,17 @@ CMD:work(playerid)
 			pizzaVehicle[playerid] = CreateVehicle(448, x, y, z, ang, -1, -1, -1);
 			PutPlayerInVehicle(playerid, pizzaVehicle[playerid], 0);
 			lastCar[playerid] = pizzaVehicle[playerid];
+
+			new rhouse = random(houses);
+			while(rhouse == lastHousePizza[playerid])
+			{
+				rhouse = random(houses);
+			}
+
+			new hmessage[128];
+			format(hmessage, sizeof(hmessage), "house selected: %d(%f,%f,%f)", rhouse, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ]);
+			SCM(playerid, -1, hmessage);
+			SetPlayerCheckpoint(playerid, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ], 5.0);
 		}
 	}
 	
@@ -610,6 +649,7 @@ CMD:getjob(playerid)
 CMD:quitjob(playerid)
 {
 	PlayerInfo[playerid][pJob] = -1;
+	isWorkingPizza[playerid] = false;
 	DestroyVehicle(pizzaVehicle[playerid]);
 	DisablePlayerCheckpoint(playerid);
 	SCM(playerid, -1, "you quit your job!");
@@ -667,6 +707,18 @@ CMD:vehname(playerid, params[])
 	return 1;
 }
 
+CMD:gotojob(playerid, params[])
+{
+	new jobid, jmessage[128];
+	if(sscanf(params, "i", jobid)) return SCM(playerid, -1, "usage: /gotojob <jobid>");
+
+	SetPlayerPos(playerid, JobInfo[jobid][jLocationX], JobInfo[jobid][jLocationY], JobInfo[jobid][jLocationZ]);
+	SetPlayerInterior(playerid, 0);
+	format(jmessage, sizeof(jmessage), "you teleported to job: %s", JobInfo[jobid][jName]);
+	SCM(playerid, -1, jmessage);
+
+	return 1;
+}
 CMD:spawnveh(playerid, params[])
 {
 	new Float:x, Float:y, Float:z;
@@ -975,6 +1027,7 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
 
 		if(oldstate == PLAYER_STATE_DRIVER && newstate == PLAYER_STATE_ONFOOT) 
 		{
+			if(PlayerInfo[playerid][pJob] == -1) return 1;
 			if(lastCar[playerid] == pizzaVehicle[playerid])
 			{
 				SCM(playerid, COLOR_RED, "you left your pizza vehicle, you have 60 seconds to return.");
@@ -1016,10 +1069,46 @@ function leftPizzaVehicle(playerid)
 	return 1;
 }
 
+function GiveMoney(playerid,money)
+{
+	PlayerInfo[playerid][pMoney] += money;
+	GivePlayerMoney(playerid,money);
+}
+
 public OnPlayerEnterCheckpoint(playerid)
 {
+	new hmessage[128];
 	DisablePlayerCheckpoint(playerid);
 	// SCM(playerid, COLOR_RED, "checkpoint entered");
+	if(isWorkingPizza[playerid])
+	{
+		new amount = 1000 + random(10000), rhouse;
+
+		GiveMoney(playerid, amount);
+		format(hmessage, sizeof(hmessage), "money gained: %d$", amount);
+		SCM(playerid, -1, hmessage);
+		new rval = random(20) * random(houses);
+		new rval2 = random(10) * random(houses);
+		
+		format(hmessage, sizeof(hmessage), "%d < %d", rval, rval2);
+		SCM(playerid, -1, hmessage);
+
+		if(rval < rval2) // ???
+		{
+			rhouse = 0;
+		}
+		else {
+			rhouse = random(houses);
+			while(rhouse == lastHousePizza[playerid])
+			{
+				rhouse = random(houses);
+			}
+		}
+
+		format(hmessage, sizeof(hmessage), "house selected: %d(%f,%f,%f)", rhouse, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ]);
+		SCM(playerid, -1, hmessage);
+		SetPlayerCheckpoint(playerid, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ], 5.0);
+	}
 
 	return 1;
 }
@@ -1096,11 +1185,38 @@ public OnPlayerInteriorChange(playerid, newinteriorid, oldinteriorid)
 
 public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 {
-	new message[128];
 	if(newkeys & KEY_SECONDARY_ATTACK)
 	{
-		format(message, sizeof(message), "pressed: KEY_SECONDARY_ATTACK")
-		SCM(playerid, -1, message);
+		new i = PickupInfo[PlayerPickup[playerid]][pkID], message[128];
+		new pickupType = PickupInfo[PlayerPickup[playerid]][pkType];
+		// format(message, sizeof(message), "i: %d", i);
+		// SCM(playerid, -1, message);
+		switch(pickupType)
+		{
+			case 1: {
+				if(IsPlayerInRangeOfPoint(playerid, 5.0, HouseInfo[i][hEntranceX], HouseInfo[i][hEntranceY], HouseInfo[i][hEntranceZ]))
+				{
+					format(message, sizeof(message), "House ID: %d", HouseInfo[i][hId]);
+
+					SetPlayerPos(playerid, 225.57,1240.06,1082.14);
+					SCM(playerid, -1, message);
+					if(!SetPlayerInterior(playerid, HouseInfo[i][hInteriorID]))
+					{
+						return SCM(playerid, -1, "error");
+					}
+
+				}
+			} 
+			case 2: {
+				if(IsPlayerInRangeOfPoint(playerid, 5.0, JobInfo[i][jLocationX], JobInfo[i][jLocationY], JobInfo[i][jLocationZ]))
+				{
+					format(message, sizeof(message), "Job ID: %d", JobInfo[i][jId]);
+					SCM(playerid, -1, message);
+				}
+			}
+
+		}
+
 	}
 	return 1;
 }
@@ -1142,18 +1258,8 @@ public OnPlayerClickPlayer(playerid, clickedplayerid, source)
 
 public OnPlayerPickUpDynamicPickup(playerid, STREAMER_TAG_PICKUP:pickupid)
 {
-	new messagep[128];
-	format(messagep, sizeof(messagep), "callback pickupid: %d", pickupid);
-	SCM(playerid, -1, messagep);
-	
+	PlayerPickup[playerid] = pickupid;
+
 	return 1;
 }
 
-// public OnPlayerPickUpDynamicPickup(playerid, STREAMER_TAG_PICKUP pickupid)
-// {
-// 	new messagep[128];
-// 	format(messagep, sizeof(messagep), "pickupid: %d", pickupid);
-// 	SCM(playerid, -1, messagep);
-
-// 	return 1;
-// }
