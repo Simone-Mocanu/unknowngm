@@ -26,10 +26,12 @@ enum pInfo {
 	pLoggedIn,
 	pJob,
 	pAdminLevel,
+	pExp
 }
 
 new pizzas[MAX_PLAYERS] = 0, isWorkingPizza[MAX_PLAYERS] = false, pizzaVehicle[MAX_PLAYERS], playername[MAX_PLAYER_NAME],
-lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS], jobs, houses, PlayerPickup[MAX_PLAYERS], lastHousePizza[MAX_PLAYERS];
+lastCar[MAX_PLAYERS], timerid[MAX_PLAYERS], jobs, houses, PlayerPickup[MAX_PLAYERS], lastHousePizza[MAX_PLAYERS],
+year, month, day, days, hour, minute, second, Text:timeText, Text:dateText;
 
 enum pkInfo {
 	pkID,
@@ -61,7 +63,8 @@ enum hInfo {
 	Float:hExitZ,
 
 	hInteriorID,
-	hPickupID
+	hPickupID,
+	Text3D:hTextLabelID
 }
 
 new HouseInfo[MAX_HOUSES][hInfo];
@@ -144,17 +147,52 @@ public OnGameModeInit()
 	DisableInteriorEnterExits();
 	EnableStuntBonusForAll(false);
 
+
+	CreateDynamicObject(19324, 2106.7137, -1742.7632, 13.2113, 0, 0, 0.72);
 	AddPlayerClass(0, 1958.3783, 1343.1572, 15.3746, 269.1425, 0, 0, 0, 0, 0, 0);
-	//jobs
+
 	mysql_tquery(SQL, "SELECT * FROM `houses`", "loadProperties", "");
 	mysql_tquery(SQL, "SELECT * FROM `jobs`", "loadJobs", "");
-	//CreateDynamicPickup(1275, 0, 2096.7034, -1800.0417, 13.3828);
-	//CreateDynamic3DTextLabel("id: 0\nJob: pizza delivery\nUse /getjob to get the job.", -1, 2096.7034, -1800.0417, 13.3828, 15.0);
 
-	// AddPlayerClass(0,2096.7034,-1800.0417,13.3828,90.9737,0,0,0,0,0,0); //
+	new funcname[30];
+	new text[30];
+	gettime(hour, minute, second);
+	format(text, sizeof(text), "%02d:%02d", hour, minute);
+	timeText = TextDrawCreate(495, 100, text);
+
+	getdate(year, month, day);
+	format(text, sizeof(text), "%02d/%02d/%d", day, month, year);
+	dateText = TextDrawCreate(495, 110, text);
+
+	format(funcname, sizeof(funcname), "updateTime");
+	SetTimer(funcname, 500, true);
 	return 1;
 }
 
+function updateTime()
+{
+	new text[30];
+	gettime(hour, minute, second);
+	format(text, sizeof(text), "%02d:%02d", hour, minute);
+	TextDrawSetString(timeText, text);
+	TextDrawShowForAll(timeText);
+	if(hour == 0 && minute == 0 && second == 0)
+	{
+		updateDate();
+	}
+
+	return 1;
+}
+
+function updateDate()
+{
+	new text[30];
+	getdate(year, month, day);
+	format(text, sizeof(text), "%02d/%02d/%d", day, month, year);
+	TextDrawSetString(dateText, text);
+	TextDrawShowForAll(dateText);
+	return 1;
+}
 function loadProperties()
 {
 	houses = cache_num_rows();
@@ -180,7 +218,7 @@ function loadProperties()
 		PickupInfo[HouseInfo[house][hPickupID]][pkType] = 1;
 
 		format(housetextlabel, sizeof(housetextlabel), "id: %d", HouseInfo[house][hId]);
-		CreateDynamic3DTextLabel(housetextlabel, -1, HouseInfo[house][hEntranceX], HouseInfo[house][hEntranceY], HouseInfo[house][hEntranceZ], 15.0);
+		HouseInfo[house][hTextLabelID] = CreateDynamic3DTextLabel(housetextlabel, -1, HouseInfo[house][hEntranceX], HouseInfo[house][hEntranceY], HouseInfo[house][hEntranceZ], 15.0);
 	}
 
 	return 1;
@@ -215,6 +253,8 @@ CMD:addhouse(playerid, params[])
 {
 	new Float:x, Float:y, Float:z, interiorid;
 	// message[128];
+
+	if(PlayerInfo[playerid][pAdminLevel] < 7 || IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command!");
 	if(sscanf(params, "i", interiorid)) return SCM(playerid, -1, "usage: /addhouse <interiorid>");
 	GetPlayerPos(playerid, x, y, z);
 
@@ -240,6 +280,83 @@ CMD:addhouse(playerid, params[])
 	return 1;
 }
 
+CMD:findhouse(playerid, params[])
+{
+	new houseid;
+	if(sscanf(params, "i", houseid)) return SCM(playerid, -1, "usage: /findhouse <houseid>");
+	if(houseid < 0 || houseid > houses) return SCM(playerid, COLOR_RED, "invalid houseid");
+	SetPlayerCheckpoint(playerid, HouseInfo[houseid][hEntranceX], HouseInfo[houseid][hEntranceY], HouseInfo[houseid][hEntranceZ], 5.0);
+
+	return 1;
+}
+
+CMD:closestcar(playerid)
+{
+	new Float:vx, Float:vy, Float:vz, Float:dist, Float:prevdist, tpvid = 1;
+
+
+	for(new vid = 2; vid <= GetVehiclePoolSize(); vid++)
+	{
+		GetVehiclePos(vid - 1, vx, vy, vz);
+		prevdist = GetPlayerDistanceFromPoint(playerid, vx, vy, vz);
+		GetVehiclePos(vid, vx, vy, vz);
+		dist = GetPlayerDistanceFromPoint(playerid, vx, vy, vz);
+
+		if(dist < prevdist) {
+			tpvid = vid; 
+		}
+	}
+
+	if(tpvid == 0)
+	{
+		return SCM(playerid, COLOR_RED, "no spawned cars found.");
+	}
+
+	PutPlayerInVehicle(playerid, tpvid, 0);
+
+	return 1;
+}
+
+CMD:gotohouse(playerid, params[])
+{
+	new houseid, message[128];
+	if(PlayerInfo[playerid][pAdminLevel] < 7 || IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command!");
+	if(sscanf(params, "i", houseid)) return SCM(playerid, -1, "usage: /gotohouse <houseid>");
+	if(houseid < 0 || houseid > houses) return SCM(playerid, COLOR_RED, "invalid houseid");
+
+	if(GetPlayerVehicleSeat(playerid) == 0)
+	{
+		new vehicleid = GetPlayerVehicleID(playerid);
+		SetVehiclePos(vehicleid, HouseInfo[houseid][hEntranceX], HouseInfo[houseid][hEntranceY], HouseInfo[houseid][hEntranceZ]);
+		PutPlayerInVehicle(playerid, vehicleid, 0);
+	}
+	else {
+		SetPlayerPos(playerid, HouseInfo[houseid][hEntranceX], HouseInfo[houseid][hEntranceY], HouseInfo[houseid][hEntranceZ]);
+	}
+
+	format(message, sizeof(message), "you teleported to house %d", houseid);
+	SCM(playerid, -1, message);
+
+	return 1;
+}
+
+CMD:removehouse(playerid, params[])
+{
+	new houseid;
+	if(PlayerInfo[playerid][pAdminLevel] < 7 || IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command!");
+	if(sscanf(params, "i", houseid)) return SCM(playerid, -1, "usage: /removehouse <houseid>");
+	if(houseid < 0 || houseid > houses) return SCM(playerid, COLOR_RED, "invalid houseid");
+
+	DestroyDynamicPickup(HouseInfo[houseid][hPickupID]);
+	DestroyDynamic3DTextLabel(HouseInfo[houseid][hTextLabelID]);
+
+	mysql_format(SQL, gQuery, sizeof(gQuery), "DELETE FROM `houses` WHERE `ID`='%d'", houseid);
+	mysql_tquery(SQL, gQuery, "", "");
+	houses--;
+	
+	return 1;
+}
+
 function InsertHouse(playerid)
 {
 	//For labeling the pickups
@@ -249,7 +366,7 @@ function InsertHouse(playerid)
 	GetPlayerPos(playerid, x, y, z);
 
 	format(textlabel, sizeof(textlabel), "id: %d", houseID);
-	CreateDynamic3DTextLabel(textlabel, -1, x, y, z, 15.0);
+	HouseInfo[houseID][hTextLabelID] = CreateDynamic3DTextLabel(textlabel, -1, x, y, z, 15.0);
 	houses++;
 }
 
@@ -268,6 +385,8 @@ public OnPlayerRequestClass(playerid, classid)
 
 public OnPlayerConnect(playerid)
 {
+	updateTime();
+	updateDate();
 
 	GetPlayerName(playerid, playername, sizeof(playername));
 	mysql_format(SQL, gQuery, sizeof(gQuery), "SELECT * FROM `users` WHERE `Name` LIKE '%e'", playername);	
@@ -324,21 +443,28 @@ function updateDatabase(playerid)
 	new pname[MAX_PLAYER_NAME];
 	GetPlayerName(playerid, pname, sizeof(pname));
 
-	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Job`='%d' WHERE `Name` LIKE '%s'", PlayerInfo[playerid][pJob], pname);
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Job`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pJob], pname);
 	mysql_tquery(SQL, gQuery, "", "");
 
-	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Level`='%d' WHERE `Name` LIKE '%s'", PlayerInfo[playerid][pLevel], pname);
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Level`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pLevel], pname);
 	mysql_tquery(SQL, gQuery, "", "");
 
-	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Money`='%d' WHERE `Name` LIKE '%s'", PlayerInfo[playerid][pMoney], pname);
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Money`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pMoney], pname);
 	mysql_tquery(SQL, gQuery, "", "");
 
-	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `BankMoney`='%d' WHERE `Name` LIKE '%s'", PlayerInfo[playerid][pBankMoney], pname);
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `BankMoney`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pBankMoney], pname);
 	mysql_tquery(SQL, gQuery, "", "");
 
-	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Level`='%d' WHERE `Name` LIKE '%s'", PlayerInfo[playerid][pLevel], pname);
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Level`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pLevel], pname);
 	mysql_tquery(SQL, gQuery, "", "");
 
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `AdminLevel`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pAdminLevel], pname);
+	mysql_tquery(SQL, gQuery, "", "");
+
+	mysql_format(SQL, gQuery, sizeof(gQuery), "UPDATE `users` SET `Skin`='%d' WHERE `Name` = '%s'", PlayerInfo[playerid][pSkin], pname);
+	mysql_tquery(SQL, gQuery, "", "");
+
+	// if(PlayerInfo[playerid][pAdminLevel] == 7 || IsPlayerAdmin(playerid)) SCM(playerid, COLOR_RED, "db updated.");
 	return 1;
 }
 
@@ -421,7 +547,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				PlayerInfo[playerid][pJob] = -1;
 
 				format(funcName, sizeof(funcName), "updateDatabase");
-				SetTimerEx(funcName, 60000, true, "i", playerid);
+				SetTimerEx(funcName, 300000, true, "i", playerid);
 			}
 		}
 
@@ -506,7 +632,6 @@ function loginAccount(playerid)
 		printf("The value in the column 'BankMoney' is '%d'.", PlayerInfo[playerid][pBankMoney]);
 
 		GivePlayerMoney(playerid, PlayerInfo[playerid][pMoney]);
-		PlayerInfo[playerid][pLoggedIn] = true;
 
 		new level;
 	    cache_get_value_name_int(0, "Level", level);
@@ -514,6 +639,21 @@ function loginAccount(playerid)
 		printf("The value in the column 'Level' is '%d'.", PlayerInfo[playerid][pLevel]);
 		SetPlayerScore(playerid, PlayerInfo[playerid][pLevel]);
 
+		new adminLevel;
+	    cache_get_value_name_int(0, "AdminLevel", adminLevel);
+		PlayerInfo[playerid][pAdminLevel] = adminLevel;
+		printf("The value in the column 'AdminLevel' is '%d'.", PlayerInfo[playerid][pAdminLevel]);
+
+		new skin;
+	    cache_get_value_name_int(0, "Skin", skin);
+		PlayerInfo[playerid][pSkin] = skin;
+		printf("The value in the column 'Skin' is '%d'.", PlayerInfo[playerid][pSkin]);
+
+		PlayerInfo[playerid][pLoggedIn] = true;
+		SetPlayerSkin(playerid, skin);
+
+		updateTime();
+		updateDate();
 		SetPlayerPos(playerid, 2094.2788,-1816.7831,13.3828);
 	}
 	else
@@ -548,6 +688,8 @@ function insertAccount(playerid)
 	format(message, sizeof(message), "%s(%d) joined.", pname, playerid);
 	SendClientMessageToAll(-1, message);
 
+	updateTime();
+	updateDate();
 	return 1;
 }
 
@@ -673,20 +815,25 @@ CMD:stats(playerid)
 	if(PlayerInfo[playerid][pJob] == 0) format(job, sizeof(job), "pizza delivery");
 	format(message, sizeof(message), "cash: %d$ | bank money: %d$ | job: %s |", PlayerInfo[playerid][pMoney], PlayerInfo[playerid][pBankMoney], job);
 	SCM(playerid, -1, message);
+	format(message, sizeof(message), "skin: %d |", PlayerInfo[playerid][pSkin]);
+	SCM(playerid, -1, message);
 	return 1;
 }
 
 CMD:fixveh(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new vehicleid = GetPlayerVehicleID(playerid);
 
 	SetVehicleHealth(vehicleid, 1000.0);
+	RepairVehicle(vehicleid);
 	SCM(playerid, -1, "vehicle repaired.");
 	return 1;
 }
 
 CMD:vehname(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new vehname[40], message[128];
 	if(sscanf(params, "s[40]", vehname)) return SCM(playerid, 0xEB4034, "usage: /vehname <vehname>.");
 
@@ -709,10 +856,23 @@ CMD:vehname(playerid, params[])
 
 CMD:gotojob(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new jobid, jmessage[128];
 	if(sscanf(params, "i", jobid)) return SCM(playerid, -1, "usage: /gotojob <jobid>");
 
-	SetPlayerPos(playerid, JobInfo[jobid][jLocationX], JobInfo[jobid][jLocationY], JobInfo[jobid][jLocationZ]);
+	//if player in car
+
+	if(GetPlayerVehicleSeat(playerid) == 0)
+	{
+		new vehicleid = GetPlayerVehicleID(playerid);
+		SetVehiclePos(vehicleid, JobInfo[jobid][jLocationX], JobInfo[jobid][jLocationY], JobInfo[jobid][jLocationZ]);
+		PutPlayerInVehicle(playerid, vehicleid, 0);
+	}
+	else {
+
+		SetPlayerPos(playerid, JobInfo[jobid][jLocationX], JobInfo[jobid][jLocationY], JobInfo[jobid][jLocationZ]);
+	}
+
 	SetPlayerInterior(playerid, 0);
 	format(jmessage, sizeof(jmessage), "you teleported to job: %s", JobInfo[jobid][jName]);
 	SCM(playerid, -1, jmessage);
@@ -721,6 +881,7 @@ CMD:gotojob(playerid, params[])
 }
 CMD:spawnveh(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new Float:x, Float:y, Float:z;
 	new modelid[30];
 	new message[128];
@@ -767,6 +928,7 @@ CMD:spawnveh(playerid, params[])
 
 CMD:destroyveha(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new vehicleid;
 	new range;
 	new count = 0;
@@ -793,11 +955,53 @@ CMD:destroyveha(playerid, params[])
 
 	return 1;
 }
+CMD:admins(playerid)
+{
+	new message[128], pname[MAX_PLAYER_NAME];
+
+	SCM(playerid, -1, "--- Online admins ---");
+	for(new i = 0; i < MAX_PLAYERS; i++)
+	{
+		if(PlayerInfo[i][pAdminLevel] > 0 && PlayerInfo[i][pLoggedIn])
+		{
+			GetPlayerName(playerid, pname, sizeof(pname));
+			format(message, sizeof(message), "%s (ID:%d) | Admin %d", pname, i, PlayerInfo[i][pAdminLevel]);
+			SCM(playerid, -1, message);
+		}
+	}
+	SCM(playerid, -1, "--------------------------");
+	return 1;
+}
+
+
+CMD:settime(playerid, params[])
+{
+	new thour, pname[MAX_PLAYER_NAME], message[128];
+	if(!IsPlayerAdmin(playerid) && PlayerInfo[playerid][pAdminLevel] < 7) return SCM(playerid, COLOR_RED, "you can't use this command!");
+	if(sscanf(params, "i", thour)) return SCM(playerid, COLOR_RED, "usage: /settime <hour>");
+	
+	SetWorldTime(thour);
+	GetPlayerName(playerid, pname, sizeof(pname));
+	format(message, sizeof(message), "%s set the world time to thour %d.", pname, hour);
+	SendClientMessageToAll(-1, message);
+	return 1;
+}
+CMD:setadmin(playerid, params[])
+{
+	if(!IsPlayerAdmin(playerid) && PlayerInfo[playerid][pAdminLevel] < 7) return SCM(playerid, COLOR_RED, "you can't use this command!");
+	new targetid, level;
+	if(sscanf(params, "ii", targetid, level)) return SCM(playerid, COLOR_RED, "usage: /setadmin <playerid> <level>");
+	if(!IsPlayerConnected(targetid) || !PlayerInfo[targetid][pLoggedIn]) return SCM(playerid, COLOR_RED, "player is not connected/logged in!");
+	if(level > 7) return SCM(playerid, COLOR_RED, "level: <1-7>");
+	//mesaj
+	PlayerInfo[targetid][pAdminLevel] = level;
+	return 1;
+}
 
 CMD:destroyveh(playerid, params[])
 {
-	new message[30];
-	new vehicleid;
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
+	new message[30], vehicleid;
 	// format(message, sizeof(message), "params: %s", params);
 	// SCM(playerid, 0xEB4034, message);
 	if(sscanf(params, "i", vehicleid)) return SCM(playerid, 0xEB4034, "usage: /destroyveh <vehicleid>.");
@@ -806,9 +1010,57 @@ CMD:destroyveh(playerid, params[])
 	SCM(playerid, 0xEB4034, message);
 	return 1;
 }
+CMD:withdraw(playerid, params[])
+{
+	new money;
+	if(sscanf(params, "i", money)) return SCM(playerid, -1, "usage: /withdraw <money>");
+	if(IsPlayerInRangeOfPoint(playerid, 1.0, 2106.7137, -1742.7632, 13.2113))
+	{
+		// CreateDynamicObject(19324, 2106.7137, -1742.7632, 13.2113, 0, 0, 0.72);
+		if(PlayerInfo[playerid][pBankMoney] < money)
+		{
+			return SCM(playerid, -1, "you do not have that amount in your bank account.");
+		}
+		else{
+			GiveMoney(playerid, money);
+			PlayerInfo[playerid][pBankMoney] -= money;
+			SCM(playerid, -1, "succes");
+		}
+	}
+	else {
+		return SCM(playerid, -1, "you have to be near an atm!");
+	}
 
+	return 1;
+}
+
+CMD:deposit(playerid, params[])
+{
+	new money;
+	if(sscanf(params, "i", money)) return SCM(playerid, -1, "usage: /withdraw <money>");
+	if(IsPlayerInRangeOfPoint(playerid, 1.0, 2106.7137, -1742.7632, 13.2113))
+	{
+		// CreateDynamicObject(19324, 2106.7137, -1742.7632, 13.2113, 0, 0, 0.72);
+		if(PlayerInfo[playerid][pMoney] < money)
+		{
+			return SCM(playerid, -1, "you don't have enough money.");
+		}
+		else{
+			GiveMoney(playerid, -money);
+			PlayerInfo[playerid][pBankMoney] += money;
+
+			SCM(playerid, -1, "succes");
+		}
+	}
+	else {
+		return SCM(playerid, -1, "you have to be near an atm!");
+	}
+
+	return 1;
+}
 CMD:giveplayer(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new targetid, good[100], Float:amount;
 
 	if(sscanf(params, "is[100]f", targetid, good, amount))
@@ -831,12 +1083,13 @@ CMD:giveplayer(playerid, params[])
 
 CMD:set(playerid, params[])
 {
+	if(PlayerInfo[playerid][pAdminLevel] < 7 && !IsPlayerAdmin(playerid)) return SCM(playerid, COLOR_RED, "you can't use this command.");
 	new targetid, good[100], amount;
 
 	if(sscanf(params, "is[100]i", targetid, good, amount))
 	{
 		SCM(playerid, 0xEB4034, "usage: /set <playerid> <stat> <amount>\n");
-		SCM(playerid, 0xEB4034, "stats: money, bankmoney, level");
+		SCM(playerid, 0xEB4034, "stats: money, bankmoney, level, skin");
 		return 1;
 	} 
 
@@ -852,7 +1105,10 @@ CMD:set(playerid, params[])
 	{
 		set(playerid, "level", targetid, amount);
 	}
-
+	if(!strcmp(good, "skin"))
+	{
+		set(playerid, "skin", targetid, amount);
+	}
 	return 1;
 }
 
@@ -1003,6 +1259,21 @@ function set(playerid, const stat[], targetid, amount)
 		format(message, sizeof(message), "you set %s's level to %d", tname, amount);
 		SCM(playerid, -1, message);
 	}
+	else if(!strcmp(stat, "skin"))
+	{
+		if(!IsPlayerConnected(targetid)) return SCM(playerid, -1, "the player is not connected!");
+		if(amount < 0 || amount > 311) return SCM(playerid, -1, "invalid skin id");
+
+		new tname[MAX_PLAYER_NAME], message[128];
+		GetPlayerName(targetid, tname, sizeof(tname));
+		SetPlayerSkin(targetid, amount);
+		PlayerInfo[targetid][pSkin] = amount;
+	
+		format(message, sizeof(message), "you set %s's skin to %d.", tname, amount);
+		SCM(playerid, -1, message);
+		format(message, sizeof(message), "admin %s has set your skin to %d.", tname, amount);
+		SCM(targetid, -1, message);
+	}
 	return 1;
 }
 public OnPlayerCommandText(playerid, cmdtext[])
@@ -1078,20 +1349,28 @@ function GiveMoney(playerid,money)
 public OnPlayerEnterCheckpoint(playerid)
 {
 	new hmessage[128];
-	DisablePlayerCheckpoint(playerid);
 	// SCM(playerid, COLOR_RED, "checkpoint entered");
+	if(!isWorkingPizza[playerid])
+	{
+		DisablePlayerCheckpoint(playerid);
+	}
+
 	if(isWorkingPizza[playerid])
 	{
+		if(GetPlayerVehicleID(playerid) != pizzaVehicle[playerid]) return SCM(playerid, -1, "you are not using your pizza vehicle!");
+		DisablePlayerCheckpoint(playerid);
+
 		new amount = 1000 + random(10000), rhouse;
 
 		GiveMoney(playerid, amount);
 		format(hmessage, sizeof(hmessage), "money gained: %d$", amount);
 		SCM(playerid, -1, hmessage);
+		SCM(playerid, -1, "go to the next checkpoint.");
 		new rval = random(20) * random(houses);
 		new rval2 = random(10) * random(houses);
 		
-		format(hmessage, sizeof(hmessage), "%d < %d", rval, rval2);
-		SCM(playerid, -1, hmessage);
+		// format(hmessage, sizeof(hmessage), "%d < %d", rval, rval2);
+		// SCM(playerid, -1, hmessage);
 
 		if(rval < rval2) // ???
 		{
@@ -1105,8 +1384,8 @@ public OnPlayerEnterCheckpoint(playerid)
 			}
 		}
 
-		format(hmessage, sizeof(hmessage), "house selected: %d(%f,%f,%f)", rhouse, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ]);
-		SCM(playerid, -1, hmessage);
+		// format(hmessage, sizeof(hmessage), "house selected: %d(%f,%f,%f)", rhouse, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ]);
+		// SCM(playerid, -1, hmessage);
 		SetPlayerCheckpoint(playerid, HouseInfo[rhouse][hEntranceX], HouseInfo[rhouse][hEntranceY], HouseInfo[rhouse][hEntranceZ], 5.0);
 	}
 
@@ -1191,15 +1470,22 @@ public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 		new pickupType = PickupInfo[PlayerPickup[playerid]][pkType];
 		// format(message, sizeof(message), "i: %d", i);
 		// SCM(playerid, -1, message);
+
+		if(IsPlayerInRangeOfPoint(playerid, 0.75, 226.0519,1239.8979,1082.1406) && GetPlayerInterior(playerid) == 2)
+		{
+
+			SetPlayerInterior(playerid, 0);
+			SetPlayerPos(playerid, HouseInfo[i][hEntranceX], HouseInfo[i][hEntranceY], HouseInfo[i][hEntranceZ]);
+		}
+		
 		switch(pickupType)
 		{
 			case 1: {
-				if(IsPlayerInRangeOfPoint(playerid, 5.0, HouseInfo[i][hEntranceX], HouseInfo[i][hEntranceY], HouseInfo[i][hEntranceZ]))
+				if(IsPlayerInRangeOfPoint(playerid, 0.75, HouseInfo[i][hEntranceX], HouseInfo[i][hEntranceY], HouseInfo[i][hEntranceZ]))
 				{
 					format(message, sizeof(message), "House ID: %d", HouseInfo[i][hId]);
-
-					SetPlayerPos(playerid, 225.57,1240.06,1082.14);
 					SCM(playerid, -1, message);
+					SetPlayerPos(playerid, 225.57,1240.06,1082.14);
 					if(!SetPlayerInterior(playerid, HouseInfo[i][hInteriorID]))
 					{
 						return SCM(playerid, -1, "error");
